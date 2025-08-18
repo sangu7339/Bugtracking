@@ -7,6 +7,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Data labels for bar and pie percentages -->
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF + autoTable for PDF export -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
+
     <style>
         :root {
             /* Light Mode Variables */
@@ -133,27 +140,22 @@
         }
         .chart-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 20px; text-align: center; }
 
-        /* Layout inside each chart: bar (left) + pie (bottom-right) */
         .chart-wrapper {
             position: relative;
             width: 100%;
-            height: 360px; /* increased to ensure both charts fit well */
+            height: 360px;
             display: grid;
-            grid-template-columns: 1fr auto; /* bar chart grows, pie sits to the right/bottom */
-            grid-template-rows: 1fr auto;     /* allow pie to anchor at bottom-right */
+            grid-template-columns: 1fr auto;
+            grid-template-rows: 1fr auto;
             gap: 10px;
         }
 
-        .bar-canvas-wrap {
-            grid-column: 1 / 2;
-            grid-row: 1 / 3; /* occupy full height on the left */
-            position: relative;
-        }
+        .bar-canvas-wrap { grid-column: 1 / 2; grid-row: 1 / 3; position: relative; }
         .bar-canvas-wrap canvas { width: 100% !important; height: 100% !important; }
 
         .pie-canvas-wrap {
             grid-column: 2 / 3;
-            grid-row: 2 / 3; /* bottom-right cell */
+            grid-row: 2 / 3;
             align-self: end;
             justify-self: end;
             width: 120px;
@@ -207,6 +209,26 @@
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
 
+        /* Export buttons row */
+        .export-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .export-btn {
+            background: var(--gradient-info);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .export-btn.secondary {
+            background: var(--gradient-warning);
+        }
+
         @media (max-width: 1024px) {
             .main-content { margin-left: 0; }
             .stats-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
@@ -232,7 +254,7 @@
             <header class="header">
                 <div class="header-left">
                     <h1 class="header-title">
-                        <span>🐛</span>
+                        <span></span>
                         Bug Tracking Dashboard
                     </h1>
                 </div>
@@ -347,7 +369,7 @@
                     </div>
                 </div>
 
-                <!-- Issues Tables (unchanged) -->
+                <!-- In Development Table -->
                 <div class="table-section">
                     <div class="table-header">
                         <h2 class="table-title">
@@ -363,7 +385,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>S.No</th>
                                     <th>Project</th>
                                     <th>Bug #</th>
                                     <th>Issue</th>
@@ -379,8 +401,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="bug : ${inDevBugs}">
-                                    <td th:text="${bug.id}">1</td>
+                                <tr th:each="bug, stat : ${inDevBugs}">
+                                    <td th:text="${stat.index + 1}">1</td>
                                     <td th:text="${bug.project}">Project Alpha</td>
                                     <td th:text="${bug.bugNumber}">BUG-001</td>
                                     <td th:text="${bug.issue}">Login form validation error</td>
@@ -418,6 +440,7 @@
                     </div>
                 </div>
 
+                <!-- In QA Table -->
                 <div class="table-section">
                     <div class="table-header">
                         <h2 class="table-title">
@@ -433,7 +456,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>S.No</th>
                                     <th>Project</th>
                                     <th>Bug #</th>
                                     <th>Issue</th>
@@ -449,8 +472,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="bug : ${inQaBugs}">
-                                    <td th:text="${bug.id}">2</td>
+                                <tr th:each="bug, stat : ${inQaBugs}">
+                                    <td th:text="${stat.index + 1}">1</td>
                                     <td th:text="${bug.project}">Project Beta</td>
                                     <td th:text="${bug.bugNumber}">BUG-002</td>
                                     <td th:text="${bug.issue}">Dashboard chart rendering issue</td>
@@ -488,6 +511,7 @@
                     </div>
                 </div>
 
+                <!-- Resolved Table -->
                 <div class="table-section">
                     <div class="table-header">
                         <h2 class="table-title">
@@ -503,7 +527,7 @@
                         <table>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>S.No</th>
                                     <th>Project</th>
                                     <th>Bug #</th>
                                     <th>Issue</th>
@@ -519,8 +543,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="bug : ${resolvedBugs}">
-                                    <td th:text="${bug.id}">3</td>
+                                <tr th:each="bug, stat : ${resolvedBugs}">
+                                    <td th:text="${stat.index + 1}">1</td>
                                     <td th:text="${bug.project}">Project Gamma</td>
                                     <td th:text="${bug.bugNumber}">BUG-003</td>
                                     <td th:text="${bug.issue}">Email notification formatting</td>
@@ -552,6 +576,72 @@
                                         <div>No resolved bugs</div>
                                         <small>Completed issues will appear here</small>
                                     </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Total Live Table (Dev + QA) Export Section -->
+                <div class="table-section">
+                    <div class="table-header">
+                        <h2 class="table-title">
+                            <span>🔥</span>
+                            Total Live (Dev + QA) - Export
+                        </h2>
+                        <div class="export-actions">
+                            <button class="export-btn" id="exportLiveExcelBtn">Export Excel</button>
+                            <button class="export-btn secondary" id="exportLivePdfBtn">Export PDF</button>
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <!-- Hidden build table for export only (not displayed) -->
+                        <table id="totalLiveExportTable" style="display:none;">
+                            <thead>
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>Project</th>
+                                    <th>Bug #</th>
+                                    <th>Issue</th>
+                                    <th>Status</th>
+                                    <th>Severity</th>
+                                    <th>Priority</th>
+                                    <th>New User</th>
+                                    <th>Partner</th>
+                                    <th>Admin</th>
+                                    <th>Sales</th>
+                                    <th>Remarks</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- We will populate rows combining inDevBugs + inQaBugs via Thymeleaf -->
+                                <tr th:each="bug, stat : ${inDevBugs}">
+                                    <td th:text="${stat.index + 1}">1</td>
+                                    <td th:text="${bug.project}">Project Alpha</td>
+                                    <td th:text="${bug.bugNumber}">BUG-001</td>
+                                    <td th:text="${bug.issue}">Issue</td>
+                                    <td>In Development</td>
+                                    <td th:text="${bug.severity}">S1</td>
+                                    <td th:text="${bug.priority}">P1</td>
+                                    <td th:text="${bug.newUser == 'APPLICABLE' ? 'Y' : (bug.newUser == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.partner == 'APPLICABLE' ? 'Y' : (bug.partner == 'NOT_APPLICABLE' ? 'N' : '')}">N</td>
+                                    <td th:text="${bug.admin == 'APPLICABLE' ? 'Y' : (bug.admin == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.sales == 'APPLICABLE' ? 'Y' : (bug.sales == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.remarks}">Remarks</td>
+                                </tr>
+                                <tr th:each="bug, stat2 : ${inQaBugs}">
+                                    <td th:text="${stat2.index + 1}">1</td>
+                                    <td th:text="${bug.project}">Project</td>
+                                    <td th:text="${bug.bugNumber}">BUG-XXX</td>
+                                    <td th:text="${bug.issue}">Issue</td>
+                                    <td>In QA</td>
+                                    <td th:text="${bug.severity}">S2</td>
+                                    <td th:text="${bug.priority}">P2</td>
+                                    <td th:text="${bug.newUser == 'APPLICABLE' ? 'Y' : (bug.newUser == 'NOT_APPLICABLE' ? 'N' : '')}">N</td>
+                                    <td th:text="${bug.partner == 'APPLICABLE' ? 'Y' : (bug.partner == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.admin == 'APPLICABLE' ? 'Y' : (bug.admin == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.sales == 'APPLICABLE' ? 'Y' : (bug.sales == 'NOT_APPLICABLE' ? 'N' : '')}">Y</td>
+                                    <td th:text="${bug.remarks}">Remarks</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -745,6 +835,24 @@
                 });
                 return res;
             }
+            initializeCharts() {
+                const inDev = this.normalizeData(this.chartData?.stageData?.inDev);
+                const inQA = this.normalizeData(this.chartData?.stageData?.inQA);
+                const resolved = this.normalizeData(this.chartData?.stageData?.resolved);
+                const totalLive = this.combineLiveData(inDev, inQA);
+
+                // Render bars
+                this.renderBar('inDevChart', inDev);
+                this.renderBar('inQAChart', inQA);
+                this.renderBar('totalLiveChart', totalLive);
+                this.renderBar('resolvedChart', resolved);
+
+                // Render pies bottom-right with percentage labels
+                this.renderPie('inDevPie', this.aggregateStage(inDev));
+                this.renderPie('inQAPie', this.aggregateStage(inQA));
+                this.renderPie('totalLivePie', this.aggregateStage(totalLive));
+                this.renderPie('resolvedPie', this.aggregateStage(resolved));
+            }
             renderPie(canvasId, values) {
                 if (!document.getElementById(canvasId)) return;
                 if (this.pieCharts[canvasId]) this.pieCharts[canvasId].destroy();
@@ -761,18 +869,10 @@
                             datalabels: {
                                 color: '#fff',
                                 font: { weight: 'bold', size: 10 },
-                                formatter: (value, ctx) => {
-                                    const pct = Math.round((value/total)*100);
+                                formatter: (value) => {
+                                    const totalVal = values.reduce((a,b)=>a+b,0) || 1;
+                                    const pct = Math.round((value/totalVal)*100);
                                     return value > 0 ? pct + '%' : '';
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: (ctx) => {
-                                        const val = ctx.parsed;
-                                        const pct = Math.round((val/total)*100);
-                                        return `${ctx.label}: ${val} (${pct}%)`;
-                                    }
                                 }
                             }
                         },
@@ -828,30 +928,77 @@
                     plugins: [ChartDataLabels]
                 });
             }
-            initializeCharts() {
-                const inDev = this.normalizeData(this.chartData?.stageData?.inDev);
-                const inQA = this.normalizeData(this.chartData?.stageData?.inQA);
-                const resolved = this.normalizeData(this.chartData?.stageData?.resolved);
-                const totalLive = this.combineLiveData(inDev, inQA);
-
-                // Render bars
-                this.renderBar('inDevChart', inDev);
-                this.renderBar('inQAChart', inQA);
-                this.renderBar('totalLiveChart', totalLive);
-                this.renderBar('resolvedChart', resolved);
-
-                // Render pies bottom-right with percentage labels
-                this.renderPie('inDevPie', this.aggregateStage(inDev));
-                this.renderPie('inQAPie', this.aggregateStage(inQA));
-                this.renderPie('totalLivePie', this.aggregateStage(totalLive));
-                this.renderPie('resolvedPie', this.aggregateStage(resolved));
-            }
         }
 
-        // Initialize
+        // Initialize charts
         new ThemeManager();
         new SettingsManager();
-        new ChartManager(chartData);
+        const cm = new ChartManager(chartData);
+
+        // -------- Export Logic for Total Live (Dev + QA) ----------
+        function tableToWorkbook(tableId, sheetName) {
+            const table = document.getElementById(tableId);
+            const workbook = XLSX.utils.book_new();
+            const ws = XLSX.utils.table_to_sheet(table, { raw: true });
+            XLSX.utils.book_append_sheet(workbook, ws, sheetName);
+            return workbook;
+        }
+
+        function downloadExcelFromTable(tableId, filename) {
+            const wb = tableToWorkbook(tableId, 'Total Live');
+            XLSX.writeFile(wb, filename);
+        }
+
+        async function downloadPdfFromTable(tableId, title, filename) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+            // Title
+            doc.setFontSize(14);
+            doc.text(title, 40, 40);
+
+            // Build head and body arrays from the table
+            const table = document.getElementById(tableId);
+            const head = [];
+            const body = [];
+
+            // headers
+            const ths = table.querySelectorAll('thead tr th');
+            const headRow = [];
+            ths.forEach(th => headRow.push(th.innerText.trim()));
+            head.push(headRow);
+
+            // rows
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const row = [];
+                tr.querySelectorAll('td').forEach(td => row.push(td.innerText.trim()));
+                body.push(row);
+            });
+
+            // AutoTable
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: 60,
+                styles: { fontSize: 9 },
+                headStyles: { fillColor: [79, 172, 254] },
+                theme: 'striped',
+                tableWidth: 'auto',
+                margin: { left: 40, right: 40 }
+            });
+
+            doc.save(filename);
+        }
+
+        // Wire up buttons
+        document.getElementById('exportLiveExcelBtn')?.addEventListener('click', function () {
+            // Note: The hidden table already contains combined Dev + QA rows
+            downloadExcelFromTable('totalLiveExportTable', 'total_live_bugs.xlsx');
+        });
+
+        document.getElementById('exportLivePdfBtn')?.addEventListener('click', function () {
+            downloadPdfFromTable('totalLiveExportTable', 'Total Live Bugs (Dev + QA)', 'total_live_bugs.pdf');
+        });
         /*]]>*/
     </script>
 </body>
